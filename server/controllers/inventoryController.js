@@ -4,12 +4,22 @@ import pool from "../config/db.js";
 export const addInventory = async (req, res) => {
   try {
     const { shop_id, product_id, total_quantity, shelf_quantity } = req.body;
+
+    // validate that provided shop and product exist to give clearer errors for FK constraints
+    const [shopRows] = await pool.query("SELECT shop_id FROM shop WHERE shop_id = ?", [shop_id]);
+    if (shopRows.length === 0) return res.status(400).json({ message: `Shop with id ${shop_id} does not exist` });
+
+    const [productRows] = await pool.query("SELECT product_id FROM product WHERE product_id = ?", [product_id]);
+    if (productRows.length === 0) return res.status(400).json({ message: `Product with id ${product_id} does not exist` });
+
     const [result] = await pool.query(
       "INSERT INTO inventory (shop_id, product_id, total_quantity, shelf_quantity) VALUES (?, ?, ?, ?)",
       [shop_id, product_id, total_quantity, shelf_quantity]
     );
+
     res.status(201).json({ message: "Inventory added", inventory_id: result.insertId });
   } catch (err) {
+    console.error("addInventory error:", err);
     res.status(500).json({ error: err.message });
   }
 };

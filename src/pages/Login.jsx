@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import API from "../utils/api";
 import { useNavigate, Link } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -102,7 +101,7 @@ export default function Login() {
         </p>
       </div>
 
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
+      {/* global ToastContainer added in App.jsx */}
     </div>
   );
 }

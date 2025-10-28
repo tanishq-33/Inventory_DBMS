@@ -4,13 +4,31 @@ import pool from "../config/db.js";
 export const createShop = async (req, res) => {
   try {
     const { shop_name, type, location, city, street, state, country, shelf_depth, owner_id } = req.body;
+
+    // If owner_id is not provided in the body, use the id from the verified token
+    // (authMiddleware sets req.owner = decoded token payload).
+    const resolvedOwnerId = owner_id || (req.owner && (req.owner.ownerId || req.owner.owner_id));
+
+    // Normalize optional fields to null if undefined to avoid SQL errors for missing columns
+    const streetVal = street === undefined ? null : street;
+    const shelfDepthVal = shelf_depth === undefined ? null : shelf_depth;
+
+    // Validate owner id before attempting DB insert
+    if (!resolvedOwnerId) {
+      console.warn("createShop: missing owner_id. req.body:", req.body, "req.owner:", req.owner);
+      return res.status(400).json({ message: "Missing owner_id. Ensure you're authenticated." });
+    }
+
+    console.log("createShop: inserting shop. req.body:", req.body, "resolvedOwnerId:", resolvedOwnerId);
+
     const [result] = await pool.query(
       `INSERT INTO shop (shop_name, type, location, city, street, state, country, shelf_depth, owner_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [shop_name, type, location, city, street, state, country, shelf_depth, owner_id]
+      [shop_name, type, location, city, streetVal, state, country, shelfDepthVal, resolvedOwnerId]
     );
     res.status(201).json({ message: "Shop created successfully", shop_id: result.insertId });
   } catch (err) {
+    console.error("createShop error:", err);
     res.status(500).json({ error: err.message });
   }
 };
