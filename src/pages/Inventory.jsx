@@ -74,6 +74,23 @@ export default function Inventory() {
     }
   };
 
+  const updateInventoryCount = async (invId, delta) => {
+    try {
+      const inv = inventory.find((i) => i.inventory_id === invId);
+      if (!inv) return;
+      const newTotal = Number(inv.total_quantity || 0) + delta;
+      const newShelf = Number(inv.shelf_quantity || 0) + delta;
+      if (newTotal < 0 || newShelf < 0) return;
+
+      await API.put(`/inventory/${invId}`, { total_quantity: newTotal, shelf_quantity: newShelf });
+      toast.success("Inventory updated");
+      fetchInventory();
+    } catch (err) {
+      const serverMsg = err?.response?.data?.message || err?.message || "Error updating inventory";
+      toast.error(serverMsg);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -130,36 +147,71 @@ export default function Inventory() {
           </button>
         </form>
 
-        {/* Inventory Table */}
-        <table className="w-full border">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border p-2">Shop</th>
-              <th className="border p-2">Product</th>
-              <th className="border p-2">Total Qty</th>
-              <th className="border p-2">Shelf Qty</th>
-              <th className="border p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inventory.map((inv) => (
-              <tr key={inv.inventory_id}>
-                <td className="border p-2">{inv.shop_name || `Shop ${inv.shop_id}`}</td>
-                <td className="border p-2">{inv.product_name || `Product ${inv.product_id}`}</td>
-                <td className="border p-2">{inv.total_quantity}</td>
-                <td className="border p-2">{inv.shelf_quantity}</td>
-                <td className="border p-2">
-                  <button
-                    className="bg-red-600 text-white px-3 py-1 rounded"
-                    onClick={() => handleDeleteInventory(inv.inventory_id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Inventory Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {inventory.map((inv) => {
+            const prod = products.find((p) => p.product_id === inv.product_id) || {};
+            const shopName = inv.shop_name || `Shop ${inv.shop_id}`;
+            const productName = inv.product_name || prod.name || `Product ${inv.product_id}`;
+            const price = prod.price;
+            const total = Number(inv.total_quantity || 0);
+            const shelf = Number(inv.shelf_quantity || 0);
+            const shelfPct = total > 0 ? Math.round((shelf / total) * 100) : 0;
+            const lowThreshold = 10;
+            const isLow = shelfPct > 0 && shelfPct < lowThreshold;
+
+            return (
+              <div key={inv.inventory_id} className="bg-white rounded-xl shadow border overflow-hidden">
+                <div className="h-40 bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
+                  <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7l9-4 9 4v10l-9 4-9-4z" />
+                  </svg>
+                </div>
+
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-gray-800">{productName}</h4>
+                      <p className="text-sm text-gray-500">{prod.type || inv.product_type || ""}</p>
+                    </div>
+                    <button onClick={() => handleDeleteInventory(inv.inventory_id)} className="text-red-500 ml-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 100 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 6a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div>
+                      {price ? <p className="text-xl font-bold">₹{price}</p> : <div className="h-6" />}
+                    </div>
+
+                    <div>
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${isLow ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                        {shelf} in stock
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center gap-3">
+                    <button onClick={() => updateInventoryCount(inv.inventory_id, -1)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded">-</button>
+                    <button onClick={() => updateInventoryCount(inv.inventory_id, 1)} className="flex-1 bg-black text-white py-2 rounded">+</button>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${shelfPct}%` }} />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                      <span>Total: {total}</span>
+                      <span>Shelf: {shelf} ({shelfPct}%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </>
   );
