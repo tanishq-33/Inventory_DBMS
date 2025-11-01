@@ -10,8 +10,10 @@ export default function Products() {
     company: "",
     price: "",
     type: "",
-    dimensions: "",
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deleteTargetName, setDeleteTargetName] = useState("");
 
   const fetchProducts = async () => {
     const res = await API.get("/products");
@@ -27,7 +29,7 @@ export default function Products() {
     try {
       await API.post("/products", newProduct);
       toast.success("Product added successfully!");
-      setNewProduct({ name: "", company: "", price: "", type: "", dimensions: "" });
+      setNewProduct({ name: "", company: "", price: "", type: "" });
       fetchProducts();
     } catch (err) {
       const serverMsg = err.response?.data?.message || err.message || "Error adding product";
@@ -35,10 +37,27 @@ export default function Products() {
     }
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Delete this product?")) return;
+  // open modal instead of using window.confirm
+  const openDeleteModal = (product) => {
+    setDeleteTargetId(product.product_id);
+    setDeleteTargetName(product.name);
+    setShowDeleteModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteTargetId(null);
+    setDeleteTargetName("");
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!deleteTargetId) return;
     try {
-      await API.delete(`/products/${id}`);
+      await API.delete(`/products/${deleteTargetId}`);
+      toast.success("Product deleted");
+      setShowDeleteModal(false);
+      setDeleteTargetId(null);
+      setDeleteTargetName("");
       fetchProducts();
     } catch (err) {
       const serverMsg = err.response?.data?.message || err.message || "Error deleting product";
@@ -84,13 +103,6 @@ export default function Products() {
               value={newProduct.type}
               onChange={(e) => setNewProduct({ ...newProduct, type: e.target.value })}
             />
-            <input
-              type="text"
-              placeholder="Dimensions"
-              className="border p-2 rounded"
-              value={newProduct.dimensions}
-              onChange={(e) => setNewProduct({ ...newProduct, dimensions: e.target.value })}
-            />
           </div>
           <button className="bg-green-600 text-white px-4 py-2 rounded mt-4">
             Add Product
@@ -118,7 +130,7 @@ export default function Products() {
                 <td className="border p-2">
                   <button
                     className="bg-red-600 text-white px-3 py-1 rounded"
-                    onClick={() => handleDeleteProduct(p.product_id)}
+                    onClick={() => openDeleteModal(p)}
                   >
                     Delete
                   </button>
@@ -128,6 +140,30 @@ export default function Products() {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded shadow-lg w-80 p-6 text-center">
+            <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
+            <p className="mb-4">Are you sure you want to delete "{deleteTargetName}"?</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={confirmDeleteProduct}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Delete
+              </button>
+              <button
+                onClick={cancelDelete}
+                className="bg-gray-300 text-black px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

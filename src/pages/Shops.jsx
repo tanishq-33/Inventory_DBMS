@@ -14,6 +14,10 @@ export default function Shops() {
     type: "",
   });
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deleteTargetName, setDeleteTargetName] = useState("");
+
   // Fetch all shops
   const fetchShops = async () => {
     const res = await API.get("/shops");
@@ -38,11 +42,27 @@ export default function Shops() {
     }
   };
 
-  // Delete a shop
-  const handleDeleteShop = async (id) => {
-    if (!window.confirm("Delete this shop?")) return;
+  // open delete confirmation modal
+  const openDeleteModal = (shop) => {
+    setDeleteTargetId(shop.shop_id);
+    setDeleteTargetName(shop.shop_name);
+    setShowDeleteModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteTargetId(null);
+    setDeleteTargetName("");
+  };
+
+  const confirmDeleteShop = async () => {
+    if (!deleteTargetId) return;
     try {
-      await API.delete(`/shops/${id}`);
+      await API.delete(`/shops/${deleteTargetId}`);
+      toast.success("Shop deleted");
+      setShowDeleteModal(false);
+      setDeleteTargetId(null);
+      setDeleteTargetName("");
       fetchShops();
     } catch (err) {
       const serverMsg = err.response?.data?.message || err.message || "Error deleting shop";
@@ -129,7 +149,7 @@ export default function Shops() {
                 <td className="border p-2">
                   <button
                     className="bg-red-600 text-white px-3 py-1 rounded"
-                    onClick={() => handleDeleteShop(shop.shop_id)}
+                    onClick={() => openDeleteModal(shop)}
                   >
                     Delete
                   </button>
@@ -139,6 +159,30 @@ export default function Shops() {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded shadow-lg w-80 p-6 text-center">
+            <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
+            <p className="mb-4">Are you sure you want to delete "{deleteTargetName}"?</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={confirmDeleteShop}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Delete
+              </button>
+              <button
+                onClick={cancelDelete}
+                className="bg-gray-300 text-black px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

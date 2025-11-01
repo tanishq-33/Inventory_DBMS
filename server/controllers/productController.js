@@ -3,10 +3,10 @@ import pool from "../config/db.js";
 // CREATE PRODUCT
 export const createProduct = async (req, res) => {
   try {
-    const { name, type, company, dimensions, price } = req.body;
+    const { name, type, company, price } = req.body;
     const [result] = await pool.query(
-      "INSERT INTO product (name, type, company, dimensions, price) VALUES (?, ?, ?, ?, ?)",
-      [name, type, company, dimensions, price]
+      "INSERT INTO product (name, type, company, price) VALUES (?, ?, ?, ?)",
+      [name, type, company, price]
     );
     res.status(201).json({ message: "Product created", product_id: result.insertId });
   } catch (err) {
@@ -38,10 +38,10 @@ export const getProductById = async (req, res) => {
 // UPDATE PRODUCT
 export const updateProduct = async (req, res) => {
   try {
-    const { name, type, company, dimensions, price } = req.body;
+    const { name, type, company, price } = req.body;
     await pool.query(
-      "UPDATE product SET name=?, type=?, company=?, dimensions=?, price=? WHERE product_id=?",
-      [name, type, company, dimensions, price, req.params.id]
+      "UPDATE product SET name=?, type=?, company=?, price=? WHERE product_id=?",
+      [name, type, company, price, req.params.id]
     );
     res.json({ message: "Product updated successfully" });
   } catch (err) {

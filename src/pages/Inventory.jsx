@@ -14,6 +14,11 @@ export default function Inventory() {
   const [products, setProducts] = useState([]);
   const [shops, setShops] = useState([]);
 
+  // modal state for delete confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deleteTargetName, setDeleteTargetName] = useState("");
+
   const fetchInventory = async () => {
     const res = await API.get("/inventory");
     setInventory(res.data);
@@ -64,13 +69,32 @@ export default function Inventory() {
     }
   };
 
+  // open centered delete modal
+  const openDeleteModal = (inv) => {
+    setDeleteTargetId(inv.inventory_id);
+    const prod = products.find((p) => p.product_id === inv.product_id) || {};
+    setDeleteTargetName(inv.product_name || prod.name || `Product ${inv.product_id}`);
+    setShowDeleteModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteTargetId(null);
+    setDeleteTargetName("");
+  };
+
+  // perform delete without window.confirm (modal handles confirmation)
   const handleDeleteInventory = async (id) => {
-    if (!window.confirm("Delete this inventory record?")) return;
     try {
       await API.delete(`/inventory/${id}`);
+      toast.success("Inventory record deleted");
       fetchInventory();
     } catch {
       toast.error("Error deleting inventory");
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTargetId(null);
+      setDeleteTargetName("");
     }
   };
 
@@ -174,7 +198,7 @@ export default function Inventory() {
                       <h4 className="font-semibold text-gray-800">{productName}</h4>
                       <p className="text-sm text-gray-500">{prod.type || inv.product_type || ""}</p>
                     </div>
-                    <button onClick={() => handleDeleteInventory(inv.inventory_id)} className="text-red-500 ml-4">
+                    <button onClick={() => openDeleteModal(inv)} className="text-red-500 ml-4">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 100 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 6a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clipRule="evenodd" />
                       </svg>
@@ -213,6 +237,30 @@ export default function Inventory() {
           })}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded shadow-lg w-96 p-6 text-center">
+            <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
+            <p className="mb-4">Are you sure you want to delete "{deleteTargetName}"?</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => deleteTargetId && handleDeleteInventory(deleteTargetId)}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Delete
+              </button>
+              <button
+                onClick={cancelDelete}
+                className="bg-gray-300 text-black px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
