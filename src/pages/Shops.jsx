@@ -17,6 +17,17 @@ export default function Shops() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [deleteTargetName, setDeleteTargetName] = useState("");
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTargetId, setEditTargetId] = useState(null);
+  const [editShop, setEditShop] = useState({
+    shop_name: "",
+    city: "",
+    state: "",
+    country: "",
+    location: "",
+    type: "",
+  });
 
   // Fetch all shops
   const fetchShops = async () => {
@@ -47,6 +58,41 @@ export default function Shops() {
     setDeleteTargetId(shop.shop_id);
     setDeleteTargetName(shop.shop_name);
     setShowDeleteModal(true);
+  };
+
+  // Open edit modal and prefill fields
+  const openEditModal = (shop) => {
+    setEditTargetId(shop.shop_id);
+    setEditShop({
+      shop_name: shop.shop_name || "",
+      city: shop.city || "",
+      state: shop.state || "",
+      country: shop.country || "",
+      location: shop.location || "",
+      type: shop.type || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const cancelEdit = () => {
+    setShowEditModal(false);
+    setEditTargetId(null);
+    setEditShop({ shop_name: "", city: "", state: "", country: "", location: "", type: "" });
+  };
+
+  const confirmUpdateShop = async () => {
+    if (!editTargetId) return;
+    try {
+      await API.put(`/shops/${editTargetId}`, editShop);
+      toast.success("Shop updated");
+      setShowEditModal(false);
+      setEditTargetId(null);
+      setEditShop({ shop_name: "", city: "", state: "", country: "", location: "", type: "" });
+      fetchShops();
+    } catch (err) {
+      const serverMsg = err.response?.data?.message || err.message || "Error updating shop";
+      toast.error(serverMsg);
+    }
   };
 
   const cancelDelete = () => {
@@ -147,18 +193,83 @@ export default function Shops() {
                 <td className="border p-2">{shop.country}</td>
                 <td className="border p-2">{shop.type}</td>
                 <td className="border p-2">
-                  <button
-                    className="bg-red-600 text-white px-3 py-1 rounded"
-                    onClick={() => openDeleteModal(shop)}
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="bg-yellow-500 text-white px-3 py-1 rounded"
+                      onClick={() => openEditModal(shop)}
+                    >
+                      Update
+                    </button>
+                    <button
+                      className="bg-red-600 text-white px-3 py-1 rounded"
+                      onClick={() => openDeleteModal(shop)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+        {/* Edit Shop Modal */}
+        {showEditModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded shadow-lg w-96 p-6">
+              <h3 className="text-lg font-semibold mb-3">Edit Shop</h3>
+              <div className="grid grid-cols-1 gap-3">
+                <input
+                  type="text"
+                  placeholder="Shop Name"
+                  className="border p-2 rounded"
+                  value={editShop.shop_name}
+                  onChange={(e) => setEditShop({ ...editShop, shop_name: e.target.value })}
+                />
+                <input
+                  type="text"
+                  placeholder="City"
+                  className="border p-2 rounded"
+                  value={editShop.city}
+                  onChange={(e) => setEditShop({ ...editShop, city: e.target.value })}
+                />
+                <input
+                  type="text"
+                  placeholder="State"
+                  className="border p-2 rounded"
+                  value={editShop.state}
+                  onChange={(e) => setEditShop({ ...editShop, state: e.target.value })}
+                />
+                <input
+                  type="text"
+                  placeholder="Country"
+                  className="border p-2 rounded"
+                  value={editShop.country}
+                  onChange={(e) => setEditShop({ ...editShop, country: e.target.value })}
+                />
+                <input
+                  type="text"
+                  placeholder="Location"
+                  className="border p-2 rounded"
+                  value={editShop.location}
+                  onChange={(e) => setEditShop({ ...editShop, location: e.target.value })}
+                />
+                <input
+                  type="text"
+                  placeholder="Type"
+                  className="border p-2 rounded"
+                  value={editShop.type}
+                  onChange={(e) => setEditShop({ ...editShop, type: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-center gap-3 mt-4">
+                <button onClick={confirmUpdateShop} className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+                <button onClick={cancelEdit} className="bg-gray-300 text-black px-4 py-2 rounded">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
