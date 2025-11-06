@@ -1,12 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import API from "../utils/api";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 export default function Register() {
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    name: "",
+    phone_number: "",
+    gender: "Male",
+    dob: "",
+    age: "",
+    aadhar_number: "",
+  });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // auto-calc age from dob when dob changes
+    if (!form.dob) return;
+    const dobDate = new Date(form.dob);
+    if (isNaN(dobDate)) return;
+    const diff = Date.now() - dobDate.getTime();
+    const age = Math.floor(new Date(diff).getUTCFullYear() - 1970);
+    setForm((f) => ({ ...f, age: age >= 0 ? age : "" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.dob]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -14,13 +35,24 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!form.username.trim() || !form.email.trim() || !form.password) {
-      toast.error("Please fill all fields");
+      toast.error("Please fill username, email and password");
       return;
     }
 
     setLoading(true);
     try {
-      await API.post("/owners/register", form);
+      // send full form matching owner schema
+      await API.post("/owners/register", {
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        name: form.name || null,
+        phone_number: form.phone_number || null,
+        gender: form.gender || null,
+        dob: form.dob || null,
+        age: form.age ? Number(form.age) : null,
+        aadhar_number: form.aadhar_number || null,
+      });
       toast.success("Registration successful — redirecting to login");
       setTimeout(() => navigate("/login"), 900);
     } catch (err) {
@@ -49,7 +81,7 @@ export default function Register() {
             name="username"
             value={form.username}
             onChange={handleChange}
-            placeholder="Your name"
+            placeholder="Your username"
             className="w-full mb-3 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             required
           />
@@ -79,6 +111,91 @@ export default function Register() {
             className="w-full mb-4 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             required
           />
+
+          <hr className="my-3" />
+
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Full name
+          </label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Full name"
+            className="w-full mb-3 px-4 py-2 rounded-lg border border-gray-200"
+          />
+
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Phone number
+          </label>
+          <input
+            name="phone_number"
+            value={form.phone_number}
+            onChange={handleChange}
+            placeholder="+91xxxxxxxxxx"
+            className="w-full mb-3 px-4 py-2 rounded-lg border border-gray-200"
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Gender
+              </label>
+              <select
+                name="gender"
+                value={form.gender}
+                onChange={handleChange}
+                className="w-full mb-3 px-3 py-2 rounded-lg border border-gray-200"
+              >
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date of birth
+              </label>
+              <input
+                name="dob"
+                type="date"
+                value={form.dob}
+                onChange={handleChange}
+                className="w-full mb-3 px-3 py-2 rounded-lg border border-gray-200"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Age
+              </label>
+              <input
+                name="age"
+                type="number"
+                value={form.age}
+                onChange={handleChange}
+                placeholder="Age"
+                className="w-full mb-3 px-3 py-2 rounded-lg border border-gray-200"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Aadhar Number
+              </label>
+              <input
+                name="aadhar_number"
+                value={form.aadhar_number}
+                onChange={handleChange}
+                placeholder="Aadhar number"
+                className="w-full mb-3 px-3 py-2 rounded-lg border border-gray-200"
+              />
+            </div>
+          </div>
 
           <button
             type="submit"
