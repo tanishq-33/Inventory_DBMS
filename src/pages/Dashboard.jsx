@@ -12,7 +12,8 @@ export default function Dashboard() {
   });
   const [shopStats, setShopStats] = useState([]);
   const [summary, setSummary] = useState({ totalItems: 0, totalValue: 0, categories: 0, lowStockCount: 0 });
-  const [lowStockItem, setLowStockItem] = useState(null);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [showLowStockAlert, setShowLowStockAlert] = useState(false);
   const [recentActivity, setRecentActivity] = useState([]);
 
   const fetchData = async () => {
@@ -55,7 +56,16 @@ export default function Dashboard() {
       });
 
       setSummary({ totalItems: totalQuantity, totalValue, categories, lowStockCount: lowItems.length });
-      setLowStockItem(lowItems.length > 0 ? lowItems[0] : null);
+      // map low items to display-friendly shape
+      const mappedLow = lowItems.map((inv) => ({
+        inventory_id: inv.inventory_id,
+        product_name: inv.product_name || productById[inv.product_id]?.name || `Product ${inv.product_id}`,
+        total: inv.total_quantity || 0,
+        shelf: inv.shelf_quantity || 0,
+        shop_name: inv.shop_name || `Shop ${inv.shop_id}`,
+      }));
+      setLowStockItems(mappedLow);
+      setShowLowStockAlert(mappedLow.length > 0);
 
       const recent = [...inventoryRes.data]
         .sort((a, b) => (b.inventory_id || 0) - (a.inventory_id || 0))
@@ -109,11 +119,38 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  // small helpers for KPI cards in the screenshot style
-  const stockoutRate = summary.totalItems ? ((summary.lowStockCount / Math.max(1, summary.totalItems)) * 100).toFixed(2) : "0.00";
-  const returnRate = "2.17"; // placeholder — replace with real metric if available
-  const returnedUnits = Math.max(0, Math.round(summary.totalItems * 0.02)); // small heuristic
-  const backorderRate = "1.11"; // placeholder
+  // Derived KPI values computed from fetched data
+  const totalInventoryRecords = stats.totalInventory || 0;
+  const totalProducts = stats.totalProducts || 0;
+  const totalUnits = summary.totalItems || 0; // total units across inventory
+
+  // low stock items already computed in summary.lowStockCount
+  const lowItemsCount = summary.lowStockCount || 0;
+  const stockoutRate = totalInventoryRecords ? ((lowItemsCount / totalInventoryRecords) * 100).toFixed(2) : "0.00";
+
+  // returned units: sum of units in recentActivity (proxy for recent returns/receipts)
+  const returnedUnits = recentActivity.reduce((s, r) => s + Number(r.units || 0), 0);
+  const returnRate = totalUnits ? ((returnedUnits / Math.max(1, totalUnits)) * 100).toFixed(2) : "0.00";
+
+  // backorder rate: proportion of units not on shelf (i.e., total - shelf) as percent of total units
+  const backorderRate = totalUnits ? (((totalUnits - stats.shelfQuantity) / Math.max(1, totalUnits)) * 100).toFixed(2) : "0.00";
+
+  // On Time Shipments: heuristic using inventory records with created_at in the recent window
+  const now = Date.now();
+  const WINDOW_DAYS = 30;
+  const windowMs = WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const recentCount = (() => {
+    try {
+      return (/* count inventory records with created_at within window */
+        recentActivity.filter((r) => r.date && (new Date(r.date)).getTime() >= now - windowMs).length
+      );
+    } catch (e) {
+      return 0;
+    }
+  })();
+  const onTimePct = totalInventoryRecords ? Math.round((recentCount / totalInventoryRecords) * 10000) / 100 : 0; // two decimals
+  const withinTimeCount = recentCount;
+  const outOfTimeCount = Math.max(0, totalInventoryRecords - recentCount);
 
   return (
     <>
@@ -202,23 +239,23 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          {/* Right: On Time Shipments donut and summary card */}
+          
+          {/* Right: On Time Shipments donut and summary card 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium mb-4">On Time Shipments</h3>
             <div className="flex flex-col items-center">
-              {/* donut */}
               <div className="w-40 h-40 flex items-center justify-center">
                 <svg viewBox="0 0 36 36" className="w-32 h-32">
                   <path d="M18 2a16 16 0 1 0 16 16A16 16 0 0 0 18 2" fill="#f3f4f6" />
-                  <path d="M18 2a16 16 0 1 0 16 16A16 16 0 0 0 18 2" fill="none" stroke="#10b981" strokeWidth="6" strokeDasharray={`${87.66} ${100 - 87.66}`} strokeDashoffset="25" strokeLinecap="round" transform="rotate(-90 18 18)" />
+                  <path d="M18 2a16 16 0 1 0 16 16A16 16 0 0 0 18 2" fill="none" stroke="#10b981" strokeWidth="6" strokeDasharray={`${onTimePct} ${100 - onTimePct}`} strokeDashoffset="25" strokeLinecap="round" transform="rotate(-90 18 18)" />
                 </svg>
               </div>
-              <div className="text-sm text-gray-500 mt-2">Within Time Limit</div>
-              <div className="text-2xl font-semibold text-green-600 mt-1">87.66%</div>
-              <div className="text-xs text-gray-400 mt-2">Within Time Limit: <span className="font-semibold">985</span> • Out of Time Limit: <span className="font-semibold">102</span></div>
+              <div className="text-sm text-gray-500 mt-2">Within Time Limit (last {WINDOW_DAYS}d)</div>
+              <div className="text-2xl font-semibold text-green-600 mt-1">{onTimePct}%</div>
+              <div className="text-xs text-gray-400 mt-2">Within Time Limit: <span className="font-semibold">{withinTimeCount}</span> • Out of Time Limit: <span className="font-semibold">{outOfTimeCount}</span></div>
             </div>
           </div>
+          */}
         </div>
 
         {/* Product Stock Details table (like screenshot) */}
@@ -278,6 +315,32 @@ export default function Dashboard() {
             )}
           </ul>
         </div>
+      {/* Low stock alert modal */}
+      {showLowStockAlert && lowStockItems.length > 0 && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded shadow-lg w-11/12 max-w-lg p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Low Stock Alert</h3>
+              <button className="text-gray-500" onClick={() => setShowLowStockAlert(false)}>Dismiss</button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">The following products have low stock (below threshold):</p>
+            <ul className="divide-y max-h-60 overflow-auto">
+              {lowStockItems.map((it) => (
+                <li key={it.inventory_id} className="py-2 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">{it.product_name}</div>
+                    <div className="text-xs text-gray-500">{it.shop_name}</div>
+                  </div>
+                  <div className="text-sm text-gray-700">Total: {it.total} • Shelf: {it.shelf}</div>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 text-right">
+              <button onClick={() => setShowLowStockAlert(false)} className="bg-indigo-600 text-white px-4 py-2 rounded">OK</button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </>
   );

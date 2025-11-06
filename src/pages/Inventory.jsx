@@ -18,6 +18,11 @@ export default function Inventory() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [deleteTargetName, setDeleteTargetName] = useState("");
+  // Sold modal state
+  const [showSoldModal, setShowSoldModal] = useState(false);
+  const [soldTargetId, setSoldTargetId] = useState(null);
+  const [soldTargetName, setSoldTargetName] = useState("");
+  const [soldQty, setSoldQty] = useState("");
 
   const fetchInventory = async () => {
     const res = await API.get("/inventory");
@@ -77,6 +82,22 @@ export default function Inventory() {
     setShowDeleteModal(true);
   };
 
+  // open sold modal
+  const openSoldModal = (inv) => {
+    setSoldTargetId(inv.inventory_id);
+    const prod = products.find((p) => p.product_id === inv.product_id) || {};
+    setSoldTargetName(inv.product_name || prod.name || `Product ${inv.product_id}`);
+    setSoldQty("");
+    setShowSoldModal(true);
+  };
+
+  const cancelSold = () => {
+    setShowSoldModal(false);
+    setSoldTargetId(null);
+    setSoldTargetName("");
+    setSoldQty("");
+  };
+
   const cancelDelete = () => {
     setShowDeleteModal(false);
     setDeleteTargetId(null);
@@ -109,6 +130,36 @@ export default function Inventory() {
       await API.put(`/inventory/${invId}`, { total_quantity: newTotal, shelf_quantity: newShelf });
       toast.success("Inventory updated");
       fetchInventory();
+    } catch (err) {
+      const serverMsg = err?.response?.data?.message || err?.message || "Error updating inventory";
+      toast.error(serverMsg);
+    }
+  };
+
+  const confirmSold = async () => {
+    if (!soldTargetId) return;
+    const qty = Number(soldQty);
+    if (!qty || qty <= 0) {
+      toast.error("Enter a valid sold quantity");
+      return;
+    }
+    try {
+      const inv = inventory.find((i) => i.inventory_id === soldTargetId);
+      if (!inv) return;
+      const total = Number(inv.total_quantity || 0);
+      const shelf = Number(inv.shelf_quantity || 0);
+      if (qty > total) {
+        toast.error("Sold quantity cannot exceed total quantity");
+        return;
+      }
+      const newTotal = total - qty;
+      // reduce shelf as well, but not below 0
+      const newShelf = Math.max(0, shelf - qty);
+
+      await API.put(`/inventory/${soldTargetId}`, { total_quantity: newTotal, shelf_quantity: newShelf });
+      toast.success("Recorded sale and updated inventory");
+      fetchInventory();
+      cancelSold();
     } catch (err) {
       const serverMsg = err?.response?.data?.message || err?.message || "Error updating inventory";
       toast.error(serverMsg);
@@ -219,6 +270,7 @@ export default function Inventory() {
 
                   <div className="mt-4 flex items-center gap-3">
                     <button onClick={() => updateInventoryCount(inv.inventory_id, -1)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded">-</button>
+                    <button onClick={() => openSoldModal(inv)} className="flex-1 bg-yellow-500 text-white py-2 rounded">Sold</button>
                     <button onClick={() => updateInventoryCount(inv.inventory_id, 1)} className="flex-1 bg-black text-white py-2 rounded">+</button>
                   </div>
 
@@ -253,6 +305,37 @@ export default function Inventory() {
               </button>
               <button
                 onClick={cancelDelete}
+                className="bg-gray-300 text-black px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sold Modal */}
+      {showSoldModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded shadow-lg w-96 p-6 text-center">
+            <h3 className="text-lg font-semibold mb-2">Record Sale</h3>
+            <p className="mb-2">Product: <span className="font-semibold">{soldTargetName}</span></p>
+            <input
+              type="number"
+              placeholder="Quantity sold"
+              value={soldQty}
+              onChange={(e) => setSoldQty(e.target.value)}
+              className="w-full mb-4 px-3 py-2 rounded border"
+            />
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={confirmSold}
+                className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={cancelSold}
                 className="bg-gray-300 text-black px-4 py-2 rounded"
               >
                 Cancel
