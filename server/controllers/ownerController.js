@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 export const registerOwner = async (req, res) => {
   try {
@@ -29,7 +30,14 @@ export const registerOwner = async (req, res) => {
     const genderVal = gender === undefined ? null : gender;
     const dobVal = dob === undefined || dob === "" ? null : dob; // expected YYYY-MM-DD or null
     const ageVal = age === undefined || age === "" ? null : Number(age);
-    const aadharVal = aadhar_number === undefined ? null : aadhar_number;
+    // If aadhar number is provided, store a deterministic hash (SHA-256) so the raw number is not stored.
+    // Use an optional server-side pepper from env for extra protection while keeping the hash deterministic.
+    const aadharVal = (() => {
+      if (aadhar_number === undefined || aadhar_number === null || String(aadhar_number).trim() === "") return null;
+      const pepper = process.env.AADHAR_PEPPER || "";
+      const normalized = String(aadhar_number).replace(/\D/g, ""); // keep digits only
+      return crypto.createHash("sha256").update(normalized + pepper).digest("hex");
+    })();
 
     const [result] = await pool.query(
       `INSERT INTO owner (username, email, password, name, phone_number, gender, dob, age, aadhar_number)
