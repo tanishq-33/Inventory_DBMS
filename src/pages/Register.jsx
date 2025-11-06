@@ -39,19 +39,38 @@ export default function Register() {
       return;
     }
 
+    // Validation rules
+    const email = form.email.trim().toLowerCase();
+    if (!email.endsWith("@gmail.com")) {
+      toast.error("Email must end with @gmail.com");
+      return;
+    }
+
+    const phoneDigits = (form.phone_number || "").replace(/\D/g, "");
+    if (phoneDigits && phoneDigits.length !== 10) {
+      toast.error("Phone number must be 10 digits");
+      return;
+    }
+
+    const aadharDigits = (form.aadhar_number || "").replace(/\D/g, "");
+    if (aadharDigits && aadharDigits.length !== 12) {
+      toast.error("Aadhar number must be 12 digits");
+      return;
+    }
+
     setLoading(true);
     try {
       // send full form matching owner schema
       await API.post("/owners/register", {
         username: form.username,
-        email: form.email,
+        email: email,
         password: form.password,
         name: form.name || null,
-        phone_number: form.phone_number || null,
+        phone_number: phoneDigits || null,
         gender: form.gender || null,
         dob: form.dob || null,
         age: form.age ? Number(form.age) : null,
-        aadhar_number: form.aadhar_number || null,
+        aadhar_number: aadharDigits || null,
       });
       toast.success("Registration successful — redirecting to login");
       setTimeout(() => navigate("/login"), 900);
@@ -87,14 +106,14 @@ export default function Register() {
           />
 
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            Email (must end with @gmail.com)
           </label>
           <input
             name="email"
             type="email"
             value={form.email}
             onChange={handleChange}
-            placeholder="you@example.com"
+            placeholder="you@gmail.com"
             className="w-full mb-3 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             required
           />
@@ -126,14 +145,16 @@ export default function Register() {
           />
 
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phone number
+            Phone number (10 digits)
           </label>
           <input
             name="phone_number"
+            type="tel"
             value={form.phone_number}
             onChange={handleChange}
-            placeholder="+91xxxxxxxxxx"
+            placeholder="10 digit phone number"
             className="w-full mb-3 px-4 py-2 rounded-lg border border-gray-200"
+            maxLength={15}
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -185,14 +206,15 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Aadhar Number
+                Aadhar Number (12 digits)
               </label>
               <input
                 name="aadhar_number"
                 value={form.aadhar_number}
                 onChange={handleChange}
-                placeholder="Aadhar number"
+                placeholder="12 digit Aadhar number"
                 className="w-full mb-3 px-3 py-2 rounded-lg border border-gray-200"
+                maxLength={12}
               />
             </div>
           </div>
