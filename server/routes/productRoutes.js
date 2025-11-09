@@ -4,14 +4,21 @@ import {
   getProducts,
   getProductById,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getAllProductsCatalog
 } from "../controllers/productController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", verifyToken, createProduct);
+// Get owner's products (filtered by inventory)
 router.get("/", verifyToken, getProducts);
+
+// Get full product catalog (for adding to inventory)
+router.get("/catalog", verifyToken, getAllProductsCatalog);
+
+// Other product routes
+router.post("/", verifyToken, createProduct);
 router.get("/:id", verifyToken, getProductById);
 router.put("/:id", verifyToken, updateProduct);
 router.delete("/:id", verifyToken, deleteProduct);

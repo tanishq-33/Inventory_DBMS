@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Shops from "./pages/Shops";
 import Inventory from "./pages/Inventory";
+import Manage from "./pages/Manage";
 
 // New pages for Roboflow integration
 import ProductDetection from "./pages/ProductDetection";
@@ -52,6 +53,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Shops />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage"
+            element={
+              <ProtectedRoute>
+                <Manage />
               </ProtectedRoute>
             }
           />

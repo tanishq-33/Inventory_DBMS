@@ -74,6 +74,14 @@ export default function Navbar() {
               📊 Inventory
             </Link>
 
+            {/* Manage Link - New */}
+            <Link
+              to="/manage"
+              className={`px-4 py-2 rounded hover:bg-indigo-700 transition ${isActive("/manage")}`}
+            >
+              ⚙️ Manage
+            </Link>
+
             {/* Detection Link - New */}
             <Link
               to="/detect"
