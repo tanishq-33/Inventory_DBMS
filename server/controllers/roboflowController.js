@@ -96,29 +96,19 @@ export const detectProducts = async (req, res) => {
       const className = pred.class;
       productCounts[className] = (productCounts[className] || 0) + 1;
     });
-<<<<<<< Updated upstream
-
-    // Check for low stock and create alerts
-=======
     console.log("   Product counts:", productCounts);
 
     // Check for low stock
     console.log("7. Checking for low stock...");
->>>>>>> Stashed changes
     const alerts = [];
     const lowStockProducts = [];
 
     for (const [productName, count] of Object.entries(productCounts)) {
-<<<<<<< Updated upstream
-      if (count < LOW_STOCK_THRESHOLD) {
-        // Find product in database
-=======
       console.log(`   - ${productName}: ${count} items`);
       
       if (count < LOW_STOCK_THRESHOLD) {
         console.log(`     → Below threshold (${LOW_STOCK_THRESHOLD}), creating alert`);
         
->>>>>>> Stashed changes
         const [productRows] = await pool.query(
           "SELECT product_id, name FROM product WHERE LOWER(name) = LOWER(?)",
           [productName]
@@ -133,10 +123,6 @@ export const detectProducts = async (req, res) => {
             threshold: LOW_STOCK_THRESHOLD,
           });
 
-<<<<<<< Updated upstream
-          // Create alert in database
-=======
->>>>>>> Stashed changes
           await pool.query(
             `INSERT INTO alerts (shop_id, product_id, alert_type, message, detected_count, threshold_count, is_read, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
@@ -157,45 +143,20 @@ export const detectProducts = async (req, res) => {
             threshold: LOW_STOCK_THRESHOLD,
             message: `Low stock alert: ${product.name}`,
           });
-<<<<<<< Updated upstream
-=======
           
           console.log(`     ✓ Alert created for ${product.name}`);
         } else {
           console.log(`     ⚠️ Product "${productName}" not found in database`);
->>>>>>> Stashed changes
         }
       }
     }
 
     // Save detection history
-<<<<<<< Updated upstream
-    const detectionData = {
-      shop_id: shop_id || null,
-      total_items_detected: predictions.length,
-      unique_products: Object.keys(productCounts).length,
-      detection_results: JSON.stringify(productCounts),
-      low_stock_alerts: alerts.length,
-    };
-
-=======
     console.log("8. Saving detection history...");
->>>>>>> Stashed changes
     const [detectionResult] = await pool.query(
       `INSERT INTO detection_history (shop_id, total_items_detected, unique_products, detection_results, low_stock_alerts, created_at)
        VALUES (?, ?, ?, ?, ?, NOW())`,
       [
-<<<<<<< Updated upstream
-        detectionData.shop_id,
-        detectionData.total_items_detected,
-        detectionData.unique_products,
-        detectionData.detection_results,
-        detectionData.low_stock_alerts,
-      ]
-    );
-
-    res.json({
-=======
         shop_id || null,
         predictions.length,
         Object.keys(productCounts).length,
@@ -207,7 +168,6 @@ export const detectProducts = async (req, res) => {
 
     console.log("9. Sending response...");
     const response = {
->>>>>>> Stashed changes
       success: true,
       detection_id: detectionResult.insertId,
       total_items: predictions.length,
@@ -215,11 +175,6 @@ export const detectProducts = async (req, res) => {
       low_stock_alerts: alerts,
       low_stock_products: lowStockProducts,
       predictions: predictions,
-<<<<<<< Updated upstream
-    });
-  } catch (err) {
-    console.error("Roboflow detection error:", err.message);
-=======
     };
     console.log("✅ DETECTION COMPLETE");
     
@@ -232,7 +187,6 @@ export const detectProducts = async (req, res) => {
     }
     console.error("Stack:", err.stack);
     
->>>>>>> Stashed changes
     res.status(500).json({
       error: "Failed to process image",
       details: err.response?.data || err.message,
@@ -240,32 +194,19 @@ export const detectProducts = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-// Get all alerts for owner
-export const getAlerts = async (req, res) => {
-  try {
-    const { shop_id, is_read } = req.query;
-=======
 export const getAlerts = async (req, res) => {
   try {
     const { shop_id, is_read } = req.query;
     const ownerId = req.owner.ownerId;
->>>>>>> Stashed changes
 
     let query = `
       SELECT a.*, p.name as product_name, s.shop_name
       FROM alerts a
       LEFT JOIN product p ON a.product_id = p.product_id
       LEFT JOIN shop s ON a.shop_id = s.shop_id
-<<<<<<< Updated upstream
-      WHERE 1=1
-    `;
-    const params = [];
-=======
       WHERE s.owner_id = ?
     `;
     const params = [ownerId];
->>>>>>> Stashed changes
 
     if (shop_id) {
       query += " AND a.shop_id = ?";
@@ -286,10 +227,6 @@ export const getAlerts = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-// Mark alert as read
-=======
->>>>>>> Stashed changes
 export const markAlertAsRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -300,17 +237,6 @@ export const markAlertAsRead = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-// Mark all alerts as read
-export const markAllAlertsAsRead = async (req, res) => {
-  try {
-    const { shop_id } = req.body;
-    
-    if (shop_id) {
-      await pool.query("UPDATE alerts SET is_read = 1 WHERE shop_id = ?", [shop_id]);
-    } else {
-      await pool.query("UPDATE alerts SET is_read = 1");
-=======
 export const markAllAlertsAsRead = async (req, res) => {
   try {
     const { shop_id } = req.body;
@@ -326,7 +252,6 @@ export const markAllAlertsAsRead = async (req, res) => {
         "UPDATE alerts a JOIN shop s ON a.shop_id = s.shop_id SET a.is_read = 1 WHERE s.owner_id = ?",
         [ownerId]
       );
->>>>>>> Stashed changes
     }
     
     res.json({ message: "All alerts marked as read" });
@@ -335,10 +260,6 @@ export const markAllAlertsAsRead = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-// Delete alert
-=======
->>>>>>> Stashed changes
 export const deleteAlert = async (req, res) => {
   try {
     const { id } = req.params;
@@ -349,31 +270,18 @@ export const deleteAlert = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-// Get detection history
-export const getDetectionHistory = async (req, res) => {
-  try {
-    const { shop_id } = req.query;
-=======
 export const getDetectionHistory = async (req, res) => {
   try {
     const { shop_id } = req.query;
     const ownerId = req.owner.ownerId;
->>>>>>> Stashed changes
 
     let query = `
       SELECT dh.*, s.shop_name
       FROM detection_history dh
       LEFT JOIN shop s ON dh.shop_id = s.shop_id
-<<<<<<< Updated upstream
-      WHERE 1=1
-    `;
-    const params = [];
-=======
       WHERE s.owner_id = ?
     `;
     const params = [ownerId];
->>>>>>> Stashed changes
 
     if (shop_id) {
       query += " AND dh.shop_id = ?";
@@ -384,10 +292,6 @@ export const getDetectionHistory = async (req, res) => {
 
     const [history] = await pool.query(query, params);
     
-<<<<<<< Updated upstream
-    // Parse detection_results JSON string
-=======
->>>>>>> Stashed changes
     const parsedHistory = history.map(record => ({
       ...record,
       detection_results: JSON.parse(record.detection_results)
@@ -399,18 +303,6 @@ export const getDetectionHistory = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-// Get unread alert count
-export const getUnreadAlertCount = async (req, res) => {
-  try {
-    const { shop_id } = req.query;
-
-    let query = "SELECT COUNT(*) as count FROM alerts WHERE is_read = 0";
-    const params = [];
-
-    if (shop_id) {
-      query += " AND shop_id = ?";
-=======
 export const getUnreadAlertCount = async (req, res) => {
   try {
     const { shop_id } = req.query;
@@ -426,7 +318,6 @@ export const getUnreadAlertCount = async (req, res) => {
 
     if (shop_id) {
       query += " AND a.shop_id = ?";
->>>>>>> Stashed changes
       params.push(shop_id);
     }
 
@@ -435,9 +326,6 @@ export const getUnreadAlertCount = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-<<<<<<< Updated upstream
-};
-=======
 };
 
 
@@ -452,4 +340,3 @@ export const getUnreadAlertCount = async (req, res) => {
 
 
 follow the same page layout, same pages, make changes to them if you want */
->>>>>>> Stashed changes
